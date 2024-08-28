@@ -1,0 +1,25 @@
+{
+  "name": "visa-france",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google-cloud/vision": "^4.3.0",
+    "axios": "^1.7.4",
+    "cli-color": "^2.0.4",
+    "dotenv": "^16.4.5",
+    "fakerator": "^0.3.6",
+    "googleapis": "^140.0.1",
+    "mongoose": "^8.5.3",
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^23.0.2",
+    "puppeteer-real-browser": "^1.2.33",
+    "terminal-image": "^3.0.0"
+  }
+}

@@ -1,0 +1,12 @@
+On creation: solved using a delay
+Waiting for the captcha image...
+Extracting the image...
+TimeoutError: Waiting for selector `#alphanumerique4to6LightCaptchaFR_CaptchaImage` failed: Waiting failed: 30000ms exceeded
+TimeoutError: Waiting for selector `#alphanumerique4to6LightCaptchaFR_CaptchaImage` failed: Waiting failed: 30000ms exceeded
+
+On getRef: solved using a delay
+Error processing filtered elements: Execution context was destroyed, most likely because of a navigation.
+Error during execution: Execution context was destroyed, most likely because of a navigation.
+
+verification step: 
+No emails found. Checking again in 8 seconds...
