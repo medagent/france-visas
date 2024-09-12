@@ -41,7 +41,7 @@ async function login(page, userData) {
     await waitAndClick(page, "#kc-form-login > div.button-holder > input");
 
     await delay(2000);
-    page.screenshot({ path: "./screenshots/login.png", fullPage: true });
+    // page.screenshot({ path: "./screenshots/login.png", fullPage: true });
 
     // Check if the account needs to be verified
     const verificationNeeded = await page.evaluate(() => {
@@ -76,7 +76,7 @@ async function login(page, userData) {
       return await login(page, userData); // Retry login after verification
     }
 
-    page.screenshot({ path: "./screenshots/login.png", fullPage: true });
+    // page.screenshot({ path: "./screenshots/login.png", fullPage: true });
     console.log("-----------------------------------------------");
     console.log("Logged in successfully.");
     console.log("-----------------------------------------------");
@@ -114,7 +114,7 @@ async function loginMember(page, userData) {
     console.log("Submitting the login form...");
     await waitAndClick(page, "#kc-form-login > div.button-holder > input");
 
-    page.screenshot({ path: "./screenshots/login.png", fullPage: true });
+    // page.screenshot({ path: "./screenshots/login.png", fullPage: true });
     console.log("-----------------------------------------------");
     console.log("Logged in successfully.");
     console.log("-----------------------------------------------");
@@ -139,6 +139,10 @@ async function loginMember(page, userData) {
 }
 
 async function fillForm(newPage, userData) {
+  // setInterval(async () => {
+  //   await newPage.screenshot({ path: `screenshots/test.png` });
+  // });
+
   const nationality = "Marocaine";
   const deposit_country = "Maroc";
   const destination = "France métropolitaine";
@@ -207,6 +211,10 @@ async function fillForm(newPage, userData) {
       "#formStep1\\:Visas-dde-travel-document-number",
       { timeout: 10000, visible: true }
     );
+    await newPage.evaluate(
+      (el) => (el.value = ""),
+      await newPage.$("#formStep1\\:Visas-dde-travel-document-number")
+    );
     await newPage.type(
       "#formStep1\\:Visas-dde-travel-document-number",
       userData.passport,
@@ -247,8 +255,9 @@ async function fillForm(newPage, userData) {
       "#formStep1\\:Visas-selected-purposeCategory_label",
       `li[data-label="${motif_voyage2}"]`
     );
+    await delay(1700);
 
-    if (userData.category === "Visite familiale ou privée") {
+    if (motif_voyage2 === "Visite familiale ou privée") {
       console.log("-----------------------------------------------");
 
       await waitAndSelectOption(
@@ -337,6 +346,11 @@ async function fillMemberForm(newPage, userData, memberData) {
       "#formStep1\\:Visas-dde-travel-document-number",
       { timeout: 10000, visible: true }
     );
+    await newPage.evaluate(
+      (el) => (el.value = ""),
+      await newPage.$("#formStep1\\:Visas-dde-travel-document-number")
+    );
+
     await newPage.type(
       "#formStep1\\:Visas-dde-travel-document-number",
       memberData.passport,
@@ -348,7 +362,7 @@ async function fillMemberForm(newPage, userData, memberData) {
 
     await newPage.waitForSelector(
       "#formStep1\\:Visas-dde-release_date_real_input",
-      { timeout: 10000 , visible: true}
+      { timeout: 10000, visible: true }
     );
     await newPage.evaluate((memberData) => {
       document.querySelector(
@@ -378,7 +392,7 @@ async function fillMemberForm(newPage, userData, memberData) {
       `li[data-label="${motif_voyage2}"]`
     );
 
-    if (userData.category === "Visite familiale ou privée") {
+    if (motif_voyage2 === "Visite familiale ou privée") {
       console.log("-----------------------------------------------");
 
       await waitAndSelectOption(
@@ -393,7 +407,7 @@ async function fillMemberForm(newPage, userData, memberData) {
     console.log("-----------------------------------------------");
 
     await waitAndClick(newPage, "#formStep1\\:btnVerifier");
-    await delay(1500);
+    await delay(3000);
 
     await waitAndClick(newPage, "#formStep1\\:btnSuivant");
     await delay(1500);
@@ -407,7 +421,7 @@ async function fillMemberForm(newPage, userData, memberData) {
   } catch (error) {
     console.error(`Error during form filling: ${error.message}`);
     await newPage.reload({ waitUntil: ["networkidle0", "domcontentloaded"] });
-    await fillForm(newPage, userData);
+    await fillMemberForm(newPage, userData, memberData)
   }
 }
 

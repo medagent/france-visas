@@ -86,7 +86,7 @@ export async function login(page) {
     await waitAndClick(newPage, "#kc-form-login > div.button-holder > input");
 
     await delay(2000);
-    newPage.screenshot({ path: "./screenshots/login.png" });
+    // newPage.screenshot({ path: "./screenshots/login.png" });
     return newPage;
   } catch (error) {
     console.error(`Error during login: ${error.message}`);

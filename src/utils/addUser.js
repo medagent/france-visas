@@ -23,8 +23,10 @@ const generateIndividualUser = (i) => {
     passport: `DF1020${i.toString()}`,
     passport_issue_date: "01/01/2020",
     passport_expiry_date: "01/01/2025",
-    motif_voyage: "Court séjour (<90 jours) - Tourisme",
+    motif_voyage: "Court séjour (<90 jours) - Visite familiale ou privée",
     acc_type: "indi",
+
+    client_status: "ACCOUNT NOT YET CREATED",
     fr_visa_acc_created: false,
     members: [],
   };
@@ -75,13 +77,15 @@ const generateFamilyUser = (i) => {
     motif_voyage: "Court séjour (<90 jours) - Tourisme",
     acc_type: "family",
     fr_visa_acc_created: false,
+
+    client_status: "ACCOUNT NOT YET CREATED",
     members: members,
   };
 };
 
 const generateUserData = () => {
   const users = [];
-  for (let i = 1026; i < 1036; i++) {
+  for (let i = 1037; i < 1050; i++) {
     const userType =
       i % 2 === 0 ? generateIndividualUser(i) : generateFamilyUser(i);
     users.push(userType);

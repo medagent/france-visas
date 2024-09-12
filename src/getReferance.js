@@ -12,11 +12,8 @@ const { launchRealBrowser } = require("./extra.js");
 async function getReferance(userData) {
   const { page, browser } = await launchRealBrowser();
 
-  
-
   try {
     const homePage = await login(page, userData);
-    
     await delay(3000);
     await fillForm(homePage, userData);
     await delay(3000);
@@ -32,13 +29,7 @@ async function getReferanceForMember(userData, memberData) {
   const { page, browser } = await launchRealBrowser();
  
   try {
-
     const homePage = await loginMember(page, userData);
-
-    // setInterval(async () => {
-    //   await homePage.screenshot({ path: `screenshots/test.png` });
-    // }, 2000);
-
     await delay(3000);
     await fillMemberForm(homePage, userData, memberData);
     await delay(3000);

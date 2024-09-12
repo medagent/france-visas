@@ -6,7 +6,7 @@ const axios = require("axios");
 const clc = require("cli-color");
 const mongoose = require("mongoose");
 const { userSchema } = require("./db.js");
-require('dotenv').config({ path: '../.env' });
+require("dotenv").config({ path: "../.env" });
 
 function delay(time) {
   // console.log(`Delaying for ${time}ms...`);
@@ -23,7 +23,6 @@ const refresh_token = process.env.REFRESH_TOKEN;
 const apiKey = process.env.API_KEY;
 
 const User = mongoose.model("User", userSchema);
-
 
 const createAccount = async (userData) => {
   var { connect } = await import("puppeteer-real-browser");
@@ -69,6 +68,12 @@ const createAccount = async (userData) => {
     await page2.click("#div-create-account .button-holder a.btn.primaire");
 
     await solveCaptcha(apiKey, userData, page2);
+
+    await User.findOneAndUpdate(
+      { email: userData.email },
+      { client_status: "ACCOUNT F.V. CREATED" },
+      { new: true }
+    );
   } catch (error) {
     throw error;
   } finally {
@@ -81,38 +86,26 @@ async function solveCaptcha(apiKey, userData, page) {
   const { default: terminalImage } = await import("terminal-image");
 
   try {
-    await page.waitForSelector(
-      "#alphanumerique4to6LightCaptchaFR_CaptchaImage",
-      {
-        timeout: 20000,
-      }
-    );
-    console.log("Solving the captcha...");
-
-    // Implement the logic to solve the captcha
     let captchaText = "";
     let confidence = 0;
-    let index = 1;
+    let attempts = 0;
+    const maxAttempts = 6;
 
-    // Loop until the confidence is greater than 0.98
-    while (true) {
+    while (attempts < maxAttempts) {
+      attempts += 1;
+      console.log(`Attempt ${attempts} of ${maxAttempts}`);
       await delay(6000);
-      console.log("Waiting for the captcha image...");
-      await page.waitForSelector(
+      
+      const captchaElement = await page.waitForSelector(
         "#alphanumerique4to6LightCaptchaFR_CaptchaImage",
         { timeout: 20000 }
       );
 
-      console.log(clc.yellow("Extracting the image..."));
-      const captchaElement = await page.$(
-        "#alphanumerique4to6LightCaptchaFR_CaptchaImage"
-      );
+      console.log("Extracting the image...");
       const imagePath = path.join(__dirname, "./screenshots/captcha_image.png");
       await captchaElement.screenshot({ path: imagePath });
-      console.log(`Image saved to ${imagePath}`);
       const imageBuffer = fs.readFileSync(imagePath);
 
-      // Prepare the request to the Vision API
       const visionResponse = await fetch(
         `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
         {
@@ -138,32 +131,20 @@ async function solveCaptcha(apiKey, userData, page) {
       );
 
       const visionResult = await visionResponse.json();
-      const fullTextAnnotation = visionResult.responses[0].fullTextAnnotation;
+      const fullTextAnnotation = visionResult.responses[0]?.fullTextAnnotation;
 
       if (fullTextAnnotation) {
-        console.log("Extracted text and confidence:");
-
         const firstWord =
           fullTextAnnotation.pages[0].blocks[0].paragraphs[0].words[0];
-        const wordText = firstWord.symbols
-          .map((symbol) => symbol.text)
-          .join("");
+        captchaText = firstWord.symbols.map((symbol) => symbol.text).join("");
         confidence = firstWord.confidence || 0;
-        console.log(clc.bgCyan(`Word: ${wordText}, Confidence: ${confidence}`));
-        captchaText = wordText;
+
+        console.log(`Word: ${captchaText}, Confidence: ${confidence}`);
       }
 
-      if (confidence < 0.9) {
-        console.log(clc.red("Confidence is too low, reloading CAPTCHA..."));
-        await page.reload({ waitUntil: "networkidle0" });
-      } else {
-        // sound.play("./sounds/not.mp3");
-
-        console.log(
-          await terminalImage.file("./screenshots/captcha_image.png", {
-            width: 70,
-          })
-        );
+      if (confidence >= 0.85) {
+        console.log(`Confidence is sufficient: ${confidence}`);
+        console.log(await terminalImage.file(imagePath, { width: 70 }));
 
         const answer = await new Promise((resolve) => {
           const rl = readline.createInterface({
@@ -178,31 +159,74 @@ async function solveCaptcha(apiKey, userData, page) {
         });
 
         if (answer === "Y") {
-          console.log(clc.green(`Correct answer: ${captchaText}`));
-          console.log(clc.yellow("Submitting the form..."));
+          console.log(`Correct answer: ${captchaText}`);
+          console.log("Submitting the form...");
           await fillAndSubmitForm(captchaText, userData, page);
-          break;
-        } else if (answer === "N") {
+          return; // Exit the function after successful submission
+        } else {
           console.log("Reloading CAPTCHA...");
           await page.reload({ waitUntil: "networkidle0" });
           continue;
-        } else {
-          console.log("Invalid input. Please enter 'Y' or 'N'.");
-          await page.reload({ waitUntil: "networkidle0" });
-          continue;
         }
+      } else {
+        console.log("Confidence is too low, reloading CAPTCHA...");
+        await page.reload({ waitUntil: "networkidle0" });
+      }
+    }
+
+    // If the max attempts are exceeded
+    while (true) {
+      console.log(clc.red("Max attempts exceeded. Please solve the CAPTCHA manually."));
+
+      // Ensure a new CAPTCHA image is captured each time
+      const captchaElement = await page.waitForSelector(
+        "#alphanumerique4to6LightCaptchaFR_CaptchaImage",
+        { timeout: 20000 }
+      );
+      const imagePath = path.join(__dirname, "./screenshots/captcha_image.png");
+      await captchaElement.screenshot({ path: imagePath });
+
+      console.log(await terminalImage.file(imagePath, { width: 70 }));
+      
+      const manualInput = await new Promise((resolve) => {
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        });
+
+        rl.question(
+          "Please enter the CAPTCHA text or type 'R' to reload: ",
+          (input) => {
+            rl.close();
+            resolve(input.toUpperCase());
+          }
+        );
+      });
+
+      if (manualInput === "R") {
+        console.log("Reloading CAPTCHA...");
+        await page.reload({ waitUntil: "networkidle0" });
+        attempts = 0; // Reset attempts
+        confidence = 0; // Reset confidence
+        continue; // Retry the captcha process
+      } else {
+        console.log(`Manual input received: ${manualInput}`);
+        console.log(clc.green("Submitting the form..."));
+        await fillAndSubmitForm(manualInput, userData, page);
+        break; // Exit the loop after successful submission
       }
     }
   } catch (error) {
-    if (error.name === "TimeoutError") {
-      throw error;
-    } else {
-      console.error("Error occurred:", error);
+    console.error("Error occurred:", error);
+    if (error.name !== "TimeoutError") {
       await page.reload({ waitUntil: "networkidle0" });
       await solveCaptcha(apiKey, userData, page);
+    } else {
+      throw error;
     }
   }
 }
+
 
 async function fillAndSubmitForm(captchaText, userData, page) {
   await page.waitForSelector("#subButton", { timeout: 0 });
@@ -240,13 +264,6 @@ async function fillAndSubmitForm(captchaText, userData, page) {
   console.log("Waiting for verification email...");
   await delay(3000);
 
-  await User.findOneAndUpdate(
-    { email: userData.email },
-    { client_status: "ACCOUNT F.V. CREATED" },
-    { new: true }
-  );
-
-
   try {
     await page.waitForSelector(
       "#cors > div:nth-child(2) > div > div > fieldset > div > div > div:nth-child(4) > div > a",
@@ -277,16 +294,11 @@ async function fillAndSubmitForm(captchaText, userData, page) {
       errorLog += `\nfor user : ${userData.email}\n`;
       errorLog += "---------------------------------------------------------\n";
 
-      fs.appendFileSync(
-        "./error_logs/form_errors.txt",
-        errorLog,
-        "utf-8",
-        (err) => {
-          if (err) {
-            console.error("Error saving error messages:", err);
-          }
+      fs.appendFileSync("./logs/form_errors.txt", errorLog, "utf-8", (err) => {
+        if (err) {
+          console.error("Error saving error messages:", err);
         }
-      );
+      });
       console.log("Error messages saved to error_logs/form_errors.txt");
     } else {
       console.log("No specific error messages found.");
@@ -326,8 +338,7 @@ async function checkForEmailWithVerificationLink(
   accessToken,
   submitTime,
   maxRetries = 6,
-  retryCount = 0,
-  
+  retryCount = 0
 ) {
   // Convert the submitTime to Unix timestamp (in seconds)
   const unixTime = Math.floor(submitTime / 1000);

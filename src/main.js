@@ -10,7 +10,6 @@ const path = "./logs/form_errors.txt";
 const resultLogPath = "./logs/result.txt";
 
 (async () => {
-
   try {
     // Clear the file contents at the start of the script
     fs.writeFileSync(path, "", "utf-8");
@@ -137,7 +136,18 @@ const resultLogPath = "./logs/result.txt";
                 // Update the family member's reference code in the database
                 await User.updateOne(
                   { "members.passport": member.passport },
-                  { $set: { "members.$.reference_code": memberReference } }
+                  {
+                    $set: {
+                      "members.$.reference_code": memberReference,
+                      "members.$.client_status": "REFERANCE CREATED",
+                    },
+                  }
+                );
+
+                await User.findOneAndUpdate(
+                  { email: userData.email },
+                  { client_status: "REFERANCE CREATED" },
+                  { new: true }
                 );
               } else {
                 console.error(
